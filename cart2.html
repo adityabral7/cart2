@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIOCREST CONSORTIUM // ADVANCED QUANTUM IMMUNOTHERAPY NODE</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-deep: #02040a;
+            --bg-panel: #060c16;
+            --bg-card: rgba(8, 16, 32, 0.85);
+            --border-neon: rgba(6, 182, 212, 0.4);
+            --border-dim: rgba(255, 255, 255, 0.05);
+            
+            --neon-cyan: #06B6D4;
+            --neon-emerald: #10B981;
+            --neon-magenta: #EC4899;
+            --neon-amber: #F59E0B;
+            --text-high: #F8FAFC;
+            --text-muted: #475569;
+            
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-deep);
+            color: var(--text-high);
+            font-family: var(--font-sans);
+            overflow: hidden;
+        }
+
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr 380px;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hud-panel {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-dim);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+        }
+
+        .hud-panel.right {
+            border-right: none;
+            border-left: 1px solid var(--border-dim);
+        }
+
+        .viewport-center {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #040a14 0%, #010205 100%);
+        }
+
+        #canvas-render-target {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Fixed High-Proficiency Non-Overlapping Label Layout Overlay */
+        #hud-overlay-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .spatial-label {
+            position: absolute;
+            background: var(--bg-card);
+            border-left: 3px solid var(--neon-cyan);
+            border-top: 1px solid var(--border-neon);
+            border-bottom: 1px solid var(--border-neon);
+            border-right: 1px solid var(--border-neon);
+            padding: 0.6rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            border-radius: 0 4px 4px 0;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 5;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+
+        .spatial-label span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.55rem;
+            margin-top: 0.2rem;
+            text-transform: uppercase;
+        }
+
+        .panel-heading {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--neon-cyan);
+            border-bottom: 1px solid var(--border-neon);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-block h1 {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        .brand-block p {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: #64748b;
+            letter-spacing: 1px;
+            margin-top: 0.2rem;
+        }
+
+        .cytometry-matrix {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-dim);
+            height: 160px;
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .cytometry-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--neon-magenta);
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+
+        .audio-node-hud {
+            background: rgba(6, 182, 212, 0.02);
+            border: 1px solid var(--border-neon);
+            padding: 1rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .audio-wave-visualizer {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 20px;
+        }
+
+        .audio-bar {
+            width: 3px;
+            height: 100%;
+            background: var(--neon-cyan);
+            border-radius: 2px;
+            transform-origin: bottom;
+            animation: audioBounce 0.5s ease infinite alternate;
+            animation-play-state: paused;
+        }
+
+        .control-element {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+        }
+
+        .hud-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .hud-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        .terminal-btn {
+            background: rgba(6, 182, 212, 0.03);
+            border: 1px solid var(--border-neon);
+            color: var(--text-high);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 100%;
+        }
+
+        .terminal-btn:hover {
+            background: var(--neon-cyan);
+            color: var(--bg-deep);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+        }
+
+        .terminal-btn.active-success {
+            border-color: var(--neon-emerald);
+            color: var(--neon-emerald);
+            background: rgba(16, 185, 129, 0.05);
+            box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+
+        .overlay-telemetry-tag {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-neon);
+            padding: 1.25rem;
+            border-radius: 4px;
+            backdrop-filter: blur(12px);
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .telemetry-row span {
+            color: var(--neon-magenta);
+            font-weight: 700;
+        }
+
+        @keyframes audioBounce {
+            0% { transform: scaleY(0.2); }
+            100% { transform: scaleY(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="lbl-cart-membrane" class="spatial-label">CD8+ CAR-T CELL MEMBRANE<span>Phospholipid Bilayer Structure</span></div>
+    <div id="lbl-car-receptor" class="spatial-label">CHIMERIC ANTIGEN RECEPTOR (CAR)<span>ScFv Antigen-Binding Domain</span></div>
+    <div id="lbl-synapse-mesh" class="spatial-label">IMMUNOLOGICAL SYNAPSE JUNCTION<span>Supramolecular Activation Cluster (SMAC)</span></div>
+    <div id="lbl-lytic-granule" class="spatial-label">PERFORIN/GRANZYME EXOCYTOSIS<span>Active Cytolytic Payload Delivery</span></div>
+    <div id="lbl-tumor-antigen" class="spatial-label">TUMOR-ASSOCIATED ANTIGEN (TAA)<span>Target Surface Biomarker Expressor</span></div>
+
+    <div class="workspace-grid">
+        
+        <aside class="hud-panel">
+            <div class="brand-block">
+                <h1>BIOCREST // LAB 01</h1>
+                <p>PhD-Level Quantitative Cellular Assays</p>
+            </div>
+
+            <div class="audio-node-hud">
+                <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--neon-cyan); letter-spacing: 1px;">SONIFICATION CORE</span>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div class="audio-wave-visualizer" id="wave-vis">
+                        <div class="audio-bar" style="animation-delay: 0.1s"></div>
+                        <div class="audio-bar" style="animation-delay: 0.3s"></div>
+                        <div class="audio-bar" style="animation-delay: 0.2s"></div>
+                    </div>
+                    <button class="terminal-btn" id="btn-audio-toggle" style="padding: 0.4rem 0.8rem; width: auto; font-size: 0.65rem;">
+                        <i class="fa-solid fa-play"></i> SYNTH
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-container">
+                <h3 class="panel-heading"><i class="fa-solid fa-gauge-high"></i> TME Stress Controls</h3>
+                
+                <div class="control-element" style="margin-top: 1rem;">
+                    <div class="control-label-row">
+                        <span>Antigen Challenge Window</span>
+                        <span id="val-exposure" style="color: var(--neon-magenta);">72 Hrs</span>
+                    </div>
+                    <input type="range" class="hud-slider" id="slide-exposure" min="24" max="240" value="72">
+                </div>
+
+                <div class="control-element" style="margin-top: 1.2rem;">
+                    <div class="control-label-row">
+                        <span>DNMTi Suppressor Titer</span>
+                        <span id="val-dnmt" style="color: var(--neon-cyan);">0.00 μM</span>
+                    </div>
+                    <input type="range" class="hud-slider" id="slide-dnmt" min="0" max="10" value="0" step="0.1">
+                </div>
+            </div>
+
+            <div class="control-container">
+                <h3 class="panel-heading"><i class="fa-solid fa-fingerprint"></i> Epigenetic Editing Engine</h3>
+                <p style="font-size: 0.65rem; color: #64748b; line-height: 1.6; margin-bottom: 1rem;">Excise transcriptional nodes to restore accessibility to silenced cytokine promoter configurations.</p>
+                
+                <button class="terminal-btn" id="btn-tox-knockout" style="margin-bottom: 0.75rem;">
+                    <i class="fa-solid fa-scissors"></i> Targeted TOX Deletion
+                </button>
+                <button class="terminal-btn" id="btn-nr4a-knockout">
+                    <i class="fa-solid fa-link-slash"></i> Ablate NR4A Family
+                </button>
+            </div>
+        </aside>
+
+        <main class="viewport-center">
+            <div id="canvas-render-target"></div>
+            <svg id="hud-overlay-svg"></svg>
+            
+            <div class="overlay-telemetry-tag">
+                <div class="telemetry-row">PHENOTYPIC_STATE: <span id="telemetry-state" style="color: var(--neon-cyan);">EXHAUSTED_SIGNAL_STALL</span></div>
+                <div class="telemetry-row">CYTOLYTIC_VELOCITY: <span id="telemetry-velocity">14.2%</span></div>
+                <div class="telemetry-row">CHROMATIN_ARCHITECTURE: <span id="telemetry-chromatin" style="color: var(--neon-amber);">CLOSED_HETEROCHROMATIN</span></div>
+            </div>
+        </main>
+
+        <aside class="hud-panel right">
+            <div class="control-container">
+                <h3 class="panel-heading"><i class="fa-solid fa-chart-line"></i> Dynamic Co-Expression Plot</h3>
+                <div class="cytometry-matrix" id="cytometry-viewport"></div>
+                <div class="control-label-row" style="margin-top: 0.5rem; color: #475569;">
+                    <span>X: Effector Granzyme B</span>
+                    <span>Y: Exhaustion Core Profile</span>
+                </div>
+            </div>
+
+            <div class="control-container">
+                <h3 class="panel-heading"><i class="fa-solid fa-shield-halved"></i> Biological Modifiers</h3>
+                <button class="terminal-btn" id="btn-checkpoint-blockade" style="margin-top: 0.5rem;">
+                    Administer anti-PD-1 Immune Blockade
+                </button>
+            </div>
+
+            <div class="control-container" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-dim); padding: 1.25rem; border-radius: 4px;">
+                <h4 style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--neon-emerald); margin-bottom: 0.5rem;"><i class="fa-solid fa-wave-square"></i> Real-time Sonification Log</h4>
+                <p id="terminal-log" style="font-family: var(--font-mono); font-size: 0.65rem; color: #64748b; line-height: 1.6;">Continuous monitoring active. Computational audio frequency curves match structural degranulation velocities.</p>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        /**
+         * 1. High-Performance Procedural Audio Engine (Web Audio API)
+         */
+        let audioCtx = null, ambientOsc = null, pulseOsc = null, masterGain = null, isAudioPlaying = false;
+
+        function initSynthesizer() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(0.06, audioCtx.currentTime); // Safe volume normalization
+                
+                ambientOsc = audioCtx.createOscillator();
+                ambientOsc.type = 'triangle';
+                ambientOsc.frequency.setValueAtTime(60, audioCtx.currentTime); // Low baseline biological resonance
+                
+                pulseOsc = audioCtx.createOscillator();
+                pulseOsc.type = 'sine';
+                pulseOsc.frequency.setValueAtTime(240, audioCtx.currentTime);
+
+                ambientOsc.connect(masterGain);
+                pulseOsc.connect(masterGain);
+                masterGain.connect(audioCtx.destination);
+                
+                ambientOsc.start();
+                pulseOsc.start();
+            }
+        }
+
+        function scaleAudioOutputs(lyticVelocity) {
+            if (audioCtx && isAudioPlaying) {
+                const baseTune = 60 + (lyticVelocity * 0.4);
+                const pulseTune = 240 + (lyticVelocity * 2.5);
+                ambientOsc.frequency.setTargetAtTime(baseTune, audioCtx.currentTime, 0.15);
+                pulseOsc.frequency.setTargetAtTime(pulseTune, audioCtx.currentTime, 0.15);
+            }
+        }
+
+        document.getElementById('btn-audio-toggle').addEventListener('click', function() {
+            initSynthesizer();
+            const bars = document.querySelectorAll('.audio-bar');
+            if (!isAudioPlaying) {
+                audioCtx.resume(); isAudioPlaying = true;
+                this.innerHTML = '<i class="fa-solid fa-pause"></i> MUTE';
+                bars.forEach(b => b.style.animationPlayState = 'running');
+            } else {
+                audioCtx.suspend(); isAudioPlaying = false;
+                this.innerHTML = '<i class="fa-solid fa-play"></i> SYNTH';
+                bars.forEach(b => b.style.animationPlayState = 'paused');
+            }
+        });
+
+        /**
+         * 2. Advanced Macromolecular 3D Workspace Architecture (Three.js Engine)
+         */
+        const viewPort = document.getElementById('canvas-render-target');
+        const overlaySvg = document.getElementById('hud-overlay-svg');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(40, viewPort.clientWidth / viewPort.clientHeight, 0.1, 1000);
+        camera.position.set(0, 0, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(viewPort.clientWidth, viewPort.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        viewPort.appendChild(renderer.domElement);
+
+        // Lighting Matrix
+        scene.add(new THREE.AmbientLight(0x0b1528, 1.5));
+        const keyLight = new THREE.DirectionalLight(0x06B6D4, 3.0);
+        keyLight.position.set(6, 10, 6);
+        scene.add(keyLight);
+        const fillLight = new THREE.PointLight(0xEC4899, 1.8, 40);
+        fillLight.position.set(-6, -4, 4);
+        scene.add(fillLight);
+
+        // Procedural Biological Topology Mesh Generator
+        function constructDetailedCellMembrane(radius, spikeDensity) {
+            const geo = new THREE.SphereGeometry(radius, 128, 128);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+                let deformation = Math.sin(x * spikeDensity) * Math.cos(y * spikeDensity) * Math.sin(z * spikeDensity) * 0.05;
+                pos.setX(i, x + x * deformation);
+                pos.setY(i, y + y * deformation);
+                pos.setZ(i, z + z * deformation);
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+
+        // CAR-T Cell Base Node
+        const cartBaseMesh = new THREE.Mesh(constructDetailedCellMembrane(1.6, 14), new THREE.MeshStandardMaterial({
+            color: 0x0ea5e9, roughness: 0.35, metalness: 0.1, flatShading: true
+        }));
+        cartBaseMesh.position.set(-2.4, 0, 0);
+        scene.add(cartBaseMesh);
+
+        // Target Malignant Tumor Base Node
+        const tumorBaseMesh = new THREE.Mesh(constructDetailedCellMembrane(2.0, 7), new THREE.MeshStandardMaterial({
+            color: 0xbe185d, roughness: 0.65, metalness: 0.2, flatShading: true
+        }));
+        tumorBaseMesh.position.set(2.4, 0, 0);
+        scene.add(tumorBaseMesh);
+
+        // High-Precision Structural Sub-Elements Insertion
+        // 1. Chimeric Antigen Receptors (CAR) on T-cell Surface
+        const carReceptorGroup = new THREE.Group();
+        for (let i = 0; i < 6; i++) {
+            const receptor = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6, 8), new THREE.MeshBasicMaterial({ color: 0x22d3ee }));
+            receptor.position.set(1.4, (i - 2.5) * 0.3, Math.sin(i) * 0.4);
+            receptor.rotation.z = Math.PI / 2;
+            carReceptorGroup.add(receptor);
+        }
+        cartBaseMesh.add(carReceptorGroup);
+
+        // 2. Tumor-Associated Antigens (TAA) Target Complexes
+        const taaAntigenGroup = new THREE.Group();
+        for (let i = 0; i < 6; i++) {
+            const antigen = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.3), new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.2 }));
+            antigen.position.set(-1.8, (i - 2.5) * 0.35, Math.cos(i) * 0.4);
+            antigen.rotation.y = Math.PI / 2;
+            taaAntigenGroup.add(antigen);
+        }
+        tumorBaseMesh.add(taaAntigenGroup);
+
+        // 3. Supramolecular Activation Junction (SMAC Synapse Complex)
+        const synapseSMACMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.0, 32, 1, true), new THREE.MeshBasicMaterial({
+            color: 0x10B981, wireframe: true, transparent: true, opacity: 0.25
+        }));
+        synapseSMACMesh.rotation.z = Math.PI / 2;
+        scene.add(synapseSMACMesh);
+
+        // 4. Perforin/Granzyme Active Delivery Lytic Vesicles
+        const lyticVesiclesGroup = new THREE.Group();
+        for (let i = 0; i < 4; i++) {
+            const granule = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+            granule.position.set((i - 1.5) * 0.25, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3);
+            lyticVesiclesGroup.add(granule);
+        }
+        scene.add(lyticVesiclesGroup);
+
+        /**
+         * 3. Structural Label Projection System (Guaranteed clear of main figures)
+         */
+        const trackMatrix = [
+            { element: cartBaseMesh, htmlId: 'lbl-cart-membrane', yOffset: -1.9, xOffset: -2.0 },
+            { element: carReceptorGroup, htmlId: 'lbl-car-receptor', yOffset: 1.9, xOffset: -1.5 },
+            { element: synapseSMACMesh, htmlId: 'lbl-synapse-mesh', yOffset: 2.2, xOffset: 0.0 },
+            { element: lyticVesiclesGroup, htmlId: 'lbl-lytic-granule', yOffset: -2.2, xOffset: 0.0 },
+            { element: tumorBaseMesh, htmlId: 'lbl-tumor-antigen', yOffset: 2.4, xOffset: 1.5 }
+        ];
+
+        function executeLabelProjectionMatrix() {
+            overlaySvg.innerHTML = '';
+            const rect = viewPort.getBoundingClientRect();
+
+            trackMatrix.forEach(item => {
+                const worldPos = new THREE.Vector3();
+                item.element.getWorldPosition(worldPos);
+                
+                // Add intentional structural baseline separation vector
+                worldPos.y += item.yOffset;
+                worldPos.x += item.xOffset;
+                worldPos.project(camera);
+
+                const projX = (worldPos.x * 0.5 + 0.5) * rect.width;
+                const projY = (-(worldPos.y * 0.5) + 0.5) * rect.height;
+
+                const labelDOM = document.getElementById(item.htmlId);
+                labelDOM.style.left = `${projX + rect.left}px`;
+                labelDOM.style.top = `${projY + rect.top}px`;
+
+                // Render micro structural vector guide pathways
+                const anchorX = (item.xOffset === 0) ? projX : (item.xOffset > 0 ? projX : projX + labelDOM.offsetWidth);
+                const baseWorldVec = new THREE.Vector3();
+                item.element.getWorldPosition(baseWorldVec);
+                baseWorldVec.project(camera);
+                const targetX = (baseWorldVec.x * 0.5 + 0.5) * rect.width;
+                const targetY = (-(baseWorldVec.y * 0.5) + 0.5) * rect.height;
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', anchorX); line.setAttribute('y1', projY + (labelDOM.offsetHeight / 2));
+                line.setAttribute('x2', targetX); line.setAttribute('y2', targetY);
+                line.setAttribute('stroke', 'rgba(6, 182, 212, 0.3)');
+                line.setAttribute('stroke-width', '1');
+                line.setAttribute('stroke-dasharray', '3,3');
+                overlaySvg.appendChild(line);
+            });
+        }
+
+        /**
+         * 4. Co-Expression Cytometry Plot Infrastructure
+         */
+        const cytoFrame = document.getElementById('cytometry-viewport');
+        const cellPoints = [];
+
+        function initCytometryEngine() {
+            cytoFrame.innerHTML = '';
+            for (let i = 0; i < 90; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'cytometry-dot';
+                cytoFrame.appendChild(dot);
+                cellPoints.push(dot);
+            }
+            projectCytometryPoints(0.7, 0.0);
+        }
+
+        function projectCytometryPoints(exhaustion, rescue) {
+            cellPoints.forEach(dot => {
+                let posX, posY;
+                if (rescue > 0.5) {
+                    posX = 65 + (Math.random() * 25);
+                    posY = 15 + (Math.random() * 25);
+                    dot.style.background = 'var(--neon-emerald)';
+                } else {
+                    posX = 20 + (Math.random() * 35) + (exhaustion * 25);
+                    posY = 45 + (Math.random() * 35) - (rescue * 30);
+                    dot.style.background = 'var(--neon-magenta)';
+                }
+                gsap.to(dot, { left: `${posX}%`, top: `${posY}%`, duration: 0.4, ease: "power1.out" });
+            });
+        }
+
+        /**
+         * 5. Kinetic Equilibrium & Parameter Calculation Processing Loop
+         */
+        let isToxKO = false, isNr4aKO = false, isAntiPD1 = false;
+        const sliderExposure = document.getElementById('slide-exposure');
+        const sliderDnmt = document.getElementById('slide-dnmt');
+
+        function evaluateKineticFormulas() {
+            const challengeHours = parseInt(sliderExposure.value);
+            const inhibitorDose = parseFloat(sliderDnmt.value);
+
+            document.getElementById('val-exposure').innerText = `${challengeHours} Hrs`;
+            document.getElementById('val-dnmt').innerText = `${inhibitorDose.toFixed(2)} μM`;
+
+            let basicExhaustionIndex = challengeHours / 240;
+            let dynamicRescueScore = (inhibitorDose / 10) * 0.35;
+
+            if (isToxKO) dynamicRescueScore += 0.25;
+            if (isNr4aKO) dynamicRescueScore += 0.25;
+            if (isAntiPD1) dynamicRescueScore += 0.15;
+
+            let finalLyticOutput = Math.min(Math.max((14.2 - (basicExhaustionIndex * 15) + (dynamicRescueScore * 95)), 4.0), 100);
+            document.getElementById('telemetry-velocity').innerText = `${finalLyticOutput.toFixed(1)}%`;
+
+            // Adjust physical sizes and vesicle transit behavior based on calculation results
+            synapseSMACMesh.scale.setScalar(0.4 + (finalLyticOutput / 100) * 1.3);
+            synapseSMACMesh.material.opacity = 0.1 + (finalLyticOutput / 100) * 0.6;
+
+            const terminalLog = document.getElementById('terminal-log');
+            const stateField = document.getElementById('telemetry-state');
+            const chromatinField = document.getElementById('telemetry-chromatin');
+
+            if (finalLyticOutput > 60) {
+                stateField.innerText = "CYTOLYTIC_KILL_ENGAGED"; stateField.style.color = "var(--neon-emerald)";
+                chromatinField.innerText = "OPEN_EUCHROMATIN_ACTIVE"; chromatinField.style.color = "var(--neon-emerald)";
+                terminalLog.innerText = "SUCCESS // Lytic degranulation active. Perforin structures polymerizing across target membranes; transcription locks successfully bypassed.";
+                gsap.to(tumorBaseMesh.scale, { x: 0.55, y: 0.55, z: 0.55, duration: 0.5 });
+            } else {
+                stateField.innerText = "EXHAUSTED_SIGNAL_STALL"; stateField.style.color = "var(--neon-magenta)";
+                chromatinField.innerText = "CLOSED_HETEROCHROMATIN"; chromatinField.style.color = "var(--neon-amber)";
+                terminalLog.innerText = "CRITICAL // Tonic signaling cascade induced exhaustion phenotype. Chronic stress vectors packaging structural loci into dense configurations.";
+                gsap.to(tumorBaseMesh.scale, { x: 1, y: 1, z: 1, duration: 0.5 });
+            }
+
+            projectCytometryPoints(basicExhaustionIndex, dynamicRescueScore);
+            scaleAudioOutputs(finalLyticOutput);
+        }
+
+        sliderExposure.addEventListener('input', evaluateKineticFormulas);
+        sliderDnmt.addEventListener('input', evaluateKineticFormulas);
+
+        document.getElementById('btn-tox-knockout').addEventListener('click', function() {
+            isToxKO = !isToxKO; this.classList.toggle('active-success', isToxKO); evaluateKineticFormulas();
+        });
+        document.getElementById('btn-nr4a-knockout').addEventListener('click', function() {
+            isNr4aKO = !isNr4aKO; this.classList.toggle('active-success', isNr4aKO); evaluateKineticFormulas();
+        });
+        document.getElementById('btn-checkpoint-blockade').addEventListener('click', function() {
+            isAntiPD1 = !isAntiPD1; this.classList.toggle('active-success', isAntiPD1); evaluateKineticFormulas();
+        });
+
+        /**
+         * 6. Frame Animation Engine Tick
+         */
+        const deltaClock = new THREE.Clock();
+
+        function renderEngineFrame() {
+            requestAnimationFrame(renderEngineFrame);
+            const runTime = deltaClock.getElapsedTime();
+
+            // Physiological Cellular Oscillations
+            cartBaseMesh.rotation.y = runTime * 0.12;
+            cartBaseMesh.rotation.z = Math.sin(runTime * 0.15) * 0.08;
+            
+            tumorBaseMesh.rotation.y = -runTime * 0.06;
+            tumorBaseMesh.rotation.x = Math.cos(runTime * 0.08) * 0.08;
+
+            synapseSMACMesh.rotation.x = runTime * 0.4;
+
+            // Microvesicle Cytolytic Transport Vector Animation
+            lyticVesiclesGroup.children.forEach((granule, idx) => {
+                granule.position.x += 0.015 * Math.sin(runTime + idx);
+                if (granule.position.x > 1.8) granule.position.x = -1.8;
+            });
+
+            renderer.render(scene, camera);
+            executeLabelProjectionMatrix();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = viewPort.clientWidth / viewPort.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(viewPort.clientWidth, viewPort.clientHeight);
+            executeLabelProjectionMatrix();
+        });
+
+        // Initialize Workspace Platform Nodes
+        initCytometryEngine();
+        evaluateKineticFormulas();
+        renderEngineFrame();
+    </script>
+</body>
+</html>
